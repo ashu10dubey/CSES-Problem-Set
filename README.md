@@ -1,4 +1,3 @@
-# CSES-Problem-Set
 <h1 align="center"> CSES Problem Set – C++ Solutions with Personal Approaches </h1>
 
 <p align="center">
