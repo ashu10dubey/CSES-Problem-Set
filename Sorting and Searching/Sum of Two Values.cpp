@@ -1,8 +1,11 @@
 #include <iostream>
-#include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
+
+// Time Complexity: O(n log n)
+// Space Complexity: O(n)
 
 int main() {
     ios::sync_with_stdio(false);
@@ -12,23 +15,27 @@ int main() {
     long long x;
     cin >> n >> x;
 
-    vector<long long> a(n);
-    unordered_map<long long, int> seen; // stores value -> index
-
+    vector<pair<long long, int>> arr(n);
     for (int i = 0; i < n; ++i) {
-        cin >> a[i];
-
-        long long complement = x - a[i];
-        if (seen.count(complement)) {
-            // Found the pair, output 1-based indices
-            cout << seen[complement] + 1 << " " << i + 1 << '\n';
-            return 0;
-        }
-        // Store current value with its index
-        seen[a[i]] = i;
+        cin >> arr[i].first;
+        arr[i].second = i + 1; // 1-based indexing
     }
 
-    // No pair found
+    sort(arr.begin(), arr.end());
+
+    int left = 0, right = n - 1;
+    while (left < right) {
+        long long sum = arr[left].first + arr[right].first;
+        if (sum == x) {
+            cout << arr[left].second << " " << arr[right].second << '\n';
+            return 0;
+        } else if (sum < x) {
+            ++left;
+        } else {
+            --right;
+        }
+    }
+
     cout << "IMPOSSIBLE\n";
     return 0;
 }
