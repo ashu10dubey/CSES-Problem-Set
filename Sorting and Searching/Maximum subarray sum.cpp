@@ -1,3 +1,4 @@
+#include <bits/stdio.h>
 #include <iostream>
 #include <vector>
 #include <algorithm>
