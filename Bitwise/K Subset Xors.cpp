@@ -1,72 +1,98 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-// Build basis for XOR space
-vector<long long> build_basis(vector<long long> &arr) {
-    vector<long long> basis;
-    for (long long x : arr) {
-        for (auto b : basis)
-            x = min(x, x ^ b);
-        if (x)
-            basis.push_back(x);
+static vector<unsigned int> build_basis(const vector<unsigned int>& a) {
+    const int B = 31;
+    vector<unsigned int> basis(B, 0);
+    for (auto x : a) {
+        unsigned int v = x;
+        for (int b = B - 1; b >= 0; --b) {
+            if (((v >> b) & 1u) == 0) continue;
+            if (!basis[b]) { basis[b] = v; break; }
+            v ^= basis[b];
+        }
     }
-    sort(basis.begin(), basis.end());
-    return basis;
+    vector<unsigned int> vecs;
+    for (int b = B - 1; b >= 0; --b) if (basis[b]) vecs.push_back(basis[b]);
+    int m = (int)vecs.size();
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < i; ++j) {
+            int msb = 31 - __builtin_clz(vecs[j]);
+            if ((vecs[i] >> msb) & 1u) vecs[i] ^= vecs[j];
+        }
+    }
+    vector<unsigned int> res;
+    for (auto v : vecs) if (v) res.push_back(v);
+    sort(res.begin(), res.end());
+    return res;
 }
-
-struct State {
-    long long val;
-    int idx;
-    vector<int> mask;
-    bool operator>(const State &other) const { return val > other.val; }
-};
 
 int main() {
     ios::sync_with_stdio(false);
-    cin.tie(0);
-
+    cin.tie(nullptr);
     int n, k;
-    cin >> n >> k;
-    vector<long long> arr(n);
-    for (auto &x : arr) cin >> x;
+    if (!(cin >> n >> k)) return 0;
+    vector<unsigned int> a(n);
+    for (int i = 0; i < n; ++i) cin >> a[i];
+    vector<unsigned int> basis = build_basis(a);
+    int r = (int)basis.size();
 
-    vector<long long> basis = build_basis(arr);
-    int m = (int)basis.size();
+    vector<unsigned int> out;
+    out.reserve(k);
 
-    // Min-heap for next minimum XORs
-    using pli = pair<long long, vector<int>>;
-    priority_queue<pair<long long, vector<int>>, vector<pair<long long, vector<int>>>, greater<>> pq;
-    set<vector<int>> vis;
+    if (r == 0) {
+        for (int i = 0; i < k; ++i) out.push_back(0);
+    } else {
+        vector<unsigned int> v = basis;
+        vector<unsigned int> unique_vals;
+        unique_vals.reserve(min(k, 1 << min(r, 20)));
+        struct HNode { unsigned int val; int i; };
+        struct HCmp { bool operator()(const HNode& a, const HNode& b) const { return a.val > b.val; } };
+        priority_queue<HNode, vector<HNode>, HCmp> hq;
 
-    vector<long long> result;
-
-    // Initial state: 0 (empty set), mask all zeroes
-    pq.push({0LL, vector<int>(m, 0)});
-    vis.insert(vector<int>(m, 0));
-
-    while ((int)result.size() < k && !pq.empty()) {
-        auto [cur, mask] = pq.top(); pq.pop();
-        result.push_back(cur);
-
-        // Generate neighbors by flipping one bit in the mask from 0 to 1
-        for (int i = 0; i < m; ++i) {
-            if (mask[i] == 0) {
-                vector<int> nmask = mask;
-                nmask[i] = 1;
-                if (vis.count(nmask)) continue;
-                long long nval = cur ^ basis[i];
-                pq.push({nval, nmask});
-                vis.insert(nmask);
+        unique_vals.push_back(0u);
+        if (k > 1) {
+            hq.push({v[0], 0});
+            while ((int)unique_vals.size() < k && !hq.empty()) {
+                auto cur = hq.top(); hq.pop();
+                unique_vals.push_back(cur.val);
+                int i = cur.i;
+                if (i + 1 < r) {
+                    hq.push({cur.val ^ v[i] ^ v[i+1], i + 1});
+                    hq.push({cur.val ^ v[i+1], i + 1});
+                }
             }
+        }
+
+        int redundant = n - r;
+        long long mult = 1;
+        while (redundant-- > 0) {
+            if (mult > (long long)2e5) { mult = (long long)2e5 + 1; break; }
+            mult <<= 1;
+        }
+
+        for (auto x : unique_vals) {
+            long long times = min<long long>(mult, k - (int)out.size());
+            for (long long t = 0; t < times; ++t) out.push_back(x);
+            if ((int)out.size() >= k) break;
+        }
+        while ((int)out.size() < k && !hq.empty()) {
+            auto cur = hq.top(); hq.pop();
+            unsigned int val = cur.val;
+            int i = cur.i;
+            if (i + 1 < r) {
+                hq.push({val ^ v[i] ^ v[i+1], i + 1});
+                hq.push({val ^ v[i+1], i + 1});
+            }
+            long long times = min<long long>(mult, k - (int)out.size());
+            for (long long t = 0; t < times; ++t) out.push_back(val);
         }
     }
 
-    // If basis is empty (all zeros), print 0 k times
-    if (basis.empty()) {
-        for (int i = 0; i < k; ++i) cout << "0 ";
-        cout << endl;
-        return 0;
+    for (int i = 0; i < k; ++i) {
+        if (i) cout << ' ';
+        cout << out[i];
     }
-    for (long long x : result) cout << x << ' ';
-    cout << endl;
+    cout << '\n';
+    return 0;
 }
